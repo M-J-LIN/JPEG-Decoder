@@ -68,7 +68,9 @@ void parseDQT(int id){
 		dqt[i].zz = (int *)malloc(sizeof(int) * dqt[0].length);
 		memset((void *)dqt[i].zz, 0, sizeof(dqt[i].zz));
 		for(int j = 0; j < 64; j++){
-			fread(&dqt[i].table[j], 1, 1, fptr); 
+			uint8_t tmp;
+			fread(&tmp, 1, 1, fptr); 
+			dqt[i].table[j] = tmp;
 			////printf("%d ",dqt[i].table[j]);
 		}
 		////printf("\n");
