@@ -1,0 +1,16 @@
+#############################################################################################
+#                                                                                           #
+#    Type "make -f README" to build decoder and convert all sample JPG to BMP files.        #
+#																					        #
+#############################################################################################
+
+all:decoder run
+
+decoder:main.c parser.c
+	gcc -std=c99 -O2 parser.c main.c -o decoder -lm 
+
+run:
+	bash sh.sh
+
+clean:
+	rm decoder *.bmp
