@@ -6,7 +6,7 @@
 #include "parser.h"
 
 static FILE* fptr;
-static uint8_t bmp[1024][1024][3];
+static uint8_t bmp[1024][2048][3];
 static uint8_t buffer[2];
 static char outputS[50];
 APP app;
@@ -19,10 +19,10 @@ SOS sos;
 int maxY, maxX;
 int max(int a, int b){return (a>b) ? a : b;}
 void parseAPP(){
-//	//printf("%x%x - APP\n", buffer[0], buffer[1]);
+	//printf("%x%x - APP\n", buffer[0], buffer[1]);
 	if(fread(buffer, 1, 2, fptr)){
 		app.length = buffer[0]*256 + buffer[1];
-//		//printf("        Lq: %d\n", app.length);
+		//printf("        Lq: %d\n", app.length);
 	}
 	fseek ( fptr , app.length - 2 , SEEK_CUR );
 }
@@ -51,19 +51,19 @@ void zigzag(int* dest, int* source, int max){
 	
 }
 void parseDQT(int id){
-//	//printf("%x%x - DQT\n", buffer[0], buffer[1]);
+	//printf("%x%x - DQT\n", buffer[0], buffer[1]);
 	int length;
 	if(fread(buffer, 1, 2, fptr)){
 		dqt[id].length = buffer[0]*256 + buffer[1];
 		length = dqt[id].length;
-		////printf("        Lq: %d\n", dqt[id].length);
+		//printf("        Lq: %d\n", dqt[id].length);
 	}
 	for(int i = id; i < id + (length - 2) / 65; i++){
 		if(fread(buffer, 1, 1, fptr)){
 			dqt[i].pq = buffer[0] >> 4, dqt[i].tq = buffer[0] % 16;
-			////printf("        Pq: %d    Tq: %d    Qk:8\n", dqt[i].pq, dqt[i].tq);
+			//printf("        Pq: %d    Tq: %d    Qk:8\n", dqt[i].pq, dqt[i].tq);
 		}
-		////printf("        In Parsing order (Zig-Zag-Scan order):\n          ");
+		//printf("        In Parsing order (Zig-Zag-Scan order):\n          ");
 		dqt[i].table = (int *)malloc(sizeof(int) * dqt[0].length);
 		dqt[i].zz = (int *)malloc(sizeof(int) * dqt[0].length);
 		memset((void *)dqt[i].zz, 0, sizeof(dqt[i].zz));
@@ -71,14 +71,14 @@ void parseDQT(int id){
 			uint8_t tmp;
 			fread(&tmp, 1, 1, fptr); 
 			dqt[i].table[j] = tmp;
-			////printf("%d ",dqt[i].table[j]);
+			//printf("%d ",dqt[i].table[j]);
 		}
-		////printf("\n");
-		////printf("        In Block order:\n          ");
+		//printf("\n");
+		//printf("        In Block order:\n          ");
 		zigzag(dqt[i].zz, dqt[i].table, 64);
 		for(int j = 0; j < 8; j++){
 			for(int k = 0; k < 8; k++){
-				////printf("%2d ", dqt[i].zz[j * 8 + k]);
+				//printf("%2d ", dqt[i].zz[j * 8 + k]);
 			}
 			//printf("\n          ");
 		}
@@ -290,9 +290,9 @@ void decode(){
 	int rest = 64, yDCPredict = 0, cbDCPredict = 0, crDCPredict = 0, predict[3];
 	predict[0] = predict[1] = predict[2] = 0;
 	maxY = sof.y / (8 * sof.nf[0].v), maxX = sof.x / (8 * sof.nf[0].h);
-	if(sof.y % 8 != 0)
+	if(sof.y % (8*sof.nf[0].v) != 0)
 		maxY++;
-	if(sof.x % 8 != 0)
+	if(sof.x % (8*sof.nf[0].h) != 0)
 		maxX++;
 	for(int i = 0; i < maxY; i++){
 		for(int j = 0; j < maxX; j++){
@@ -465,6 +465,7 @@ void parse(char * filename){
 	strcpy(outputS, filename);
 	int lengthS = strlen(outputS);
 	outputS[lengthS-3] = 'b', outputS[lengthS-2] = 'm', outputS[lengthS-1] = 'p';
+	//printf("BMP\n");
 	if(fptr != NULL){
 		if(fread(buffer, 1, 2, fptr))
 			//printf("%x%x - SOF\n", buffer[0], buffer[1]);
@@ -515,10 +516,11 @@ void output(char * filename){
 		unsigned int importantcolours; /* Important colours */ 
 	} INFOHEADER;
 	FILEHEADER fileheader;
-	int Y = maxY*sof.nf[0].v*8, X = maxX*sof.nf[0].h*8;
-	fileheader.type = 0x4d42, fileheader.size = 54+X*Y*3, fileheader.reserved1 = fileheader.reserved2 = 0, fileheader.offset = 54;
+	int Y = sof.y, X = (sof.x*3+3)/4*4;
+	//int Y = maxY*sof.nf[0].v*8, X = maxX*sof.nf[0].h*8;
+	fileheader.type = 0x4d42, fileheader.size = 54+X*Y, fileheader.reserved1 = fileheader.reserved2 = 0, fileheader.offset = 54;
 	INFOHEADER infoheader;
-	infoheader.size = 40, infoheader.width = X, infoheader.height = Y, infoheader.planes = 1, infoheader.bits = 24, infoheader.compression = 0;
+	infoheader.size = 40, infoheader.width = sof.x, infoheader.height = sof.y, infoheader.planes = 1, infoheader.bits = 24, infoheader.compression = 0;
 	infoheader.imagesize = 0, infoheader.xresolution = infoheader.yresolution = 0x0b12, infoheader.ncolours = infoheader.importantcolours = 0;	
 	FILE * wfp;
 	wfp = fopen(filename, "wb");
@@ -528,14 +530,15 @@ void output(char * filename){
 	fwrite(&fileheader.reserved2, 1, sizeof(fileheader.reserved2), wfp);
 	fwrite(&fileheader.offset, 1, sizeof(fileheader.offset), wfp);
 	fwrite(&infoheader, 1, sizeof(INFOHEADER), wfp);
-	uint8_t imgbuf[X*3];
+	uint8_t imgbuf[X];
 	for(int i = Y-1; i >= 0; i--){
-		for(int j = 0; j < X; j++){
+		memset(imgbuf, 0, sizeof(imgbuf));
+		for(int j = 0; j < sof.x; j++){
 			imgbuf[j*3] = bmp[i][j][0];
 			imgbuf[j*3+1] = bmp[i][j][1];
 			imgbuf[j*3+2] = bmp[i][j][2];
 		}
-		fwrite(imgbuf, sizeof(imgbuf), 1, wfp);
+		fwrite(imgbuf, sizeof(uint8_t), X, wfp);
 	}
 	
 	fclose(wfp);	
