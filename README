@@ -1,6 +1,6 @@
 #############################################################################################
 #                                                                                           #
-#	 Enviroment: Ubuntu 14.04  Compiler: gcc 4.8.4                                          #
+#	 Enviroment: Ubuntu 14.04  Compiler: gcc 4.8.4                                      #
 #    Type "make -f README" to build decoder and convert all sample JPG to BMP files.        #
 #                                                                                           #
 #############################################################################################
